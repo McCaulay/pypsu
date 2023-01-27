@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import sys
+from psu.psu import PSU
+from psu.exceptions import PSUException
+
+VERSION = '0.1.0'
+
+class ArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        """Raises an exception with the given message.
+        Overrides the parent class to prevent the application exiting.
+
+        Args:
+            message (str): The error message.
+
+        Raises:
+            Exception: The exception raised for the error.
+        """
+        raise Exception(message)
+
+    def exit(self, status = 0, message = None):
+        """Raises an exception with the given message.
+
+        Args:
+            status (int, optional): The exit status code. Defaults to 0.
+            message (str, optional): The error message. Defaults to None.
+
+        Raises:
+            Exception: The exception raised for the error.
+        """
+        if message != None:
+            raise Exception(message)
+
+def doList(args):
+    """List the files and directories in a given PSU file.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+    """
+    print(PSU.load(args.psu))
+
+def doCreate(args):
+    """Create a new PSU file.
+
+    Args:
+        args.psu (str): The filepath location for the PSU to be saved.
+    """
+    PSU.create(args.psu).save()
+    print(f'[+] PSU file "{args.psu}" created')
+
+def doImport(args):
+    """Import a file from the local disk to the game save.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+        args.filepath (str): The destination filepath the file should be imported to.
+        args.name (str): The entry name within the PSU file. Defaults to None.
+    """
+    # Default name to filepath filename if not provided
+    name = args.name if args.name != None else os.path.basename(args.filepath)
+
+    try:
+        # Import entry from filepath to PSU
+        psu = PSU.load(args.psu)
+        psu.copy(args.filepath, name)
+        psu.save()
+        print(f'[+] {args.filepath} imported to {name}')
+    except PSUException as e:
+        print(f'[-] {e}')
+        return
+
+def doExport(args):
+    """Export a file from the game save to the local disk.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+        args.name (str): The entry name within the PSU file.
+        args.filepath (str): The destination filepath the file should be exported to. Defaults to None.
+    """
+
+    # Default filepath to name if not provided
+    filepath = args.filepath if args.filepath != None else args.name
+
+    try:
+        # Export entry from PSU to filepath
+        PSU.load(args.psu).export(filepath, args.name)
+        print(f'[+] {args.name} exported to {filepath}')
+    except PSUException as e:
+        print(f'[-] {e}')
+        return
+
+def doRename(args):
+    """Rename a game save entry file within the game save.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+        args.name (str): The existing entry name within the PSU file.
+        args.to (str): The new entry name to be saved.
+    """
+    try:
+        psu = PSU.load(args.psu)
+        entry = psu.get(args.name)
+        entry.name = args.to
+        psu.save()
+        print(f'[+] {args.name} renamed to {args.to}')
+    except PSUException as e:
+        print(f'[-] {e}')
+        return
+
+def doDelete(args):
+    """Delete a game save entry file from the game save.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+        args.name (str): The entry name within the PSU file.
+    """
+    try:
+        psu = PSU.load(args.psu)
+        psu.delete(args.name)
+        psu.save()
+        print(f'[+] {args.name} deleted')
+    except PSUException as e:
+        print(f'[-] {e}')
+        return
+
+def doHelp(args):
+    """Prints the parser's help output.
+
+    Args:
+        args (Object): N/A
+    """
+    args.parser.print_help()
+
+def doExit(args):
+    """Exits the application.
+
+    Args:
+        args (Object): N/A
+    """
+    sys.exit(0)
+
+def doInteractive(args):
+    """Execute PSU commands in an interactive terminal.
+
+    Args:
+        args.psu (str): The PSU filepath to be loaded.
+    """
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers(title='Commands')
+    addPsuCommandsToSubParsers(subparsers, False)
+
+    # help
+    parser_help = subparsers.add_parser('help', aliases=['h'], help='Display the help message.')
+    parser_help.set_defaults(exec=doHelp, parser=parser)
+
+    # exit
+    parser_exit = subparsers.add_parser('exit', aliases=['quit'], help='Exit the application.')
+    parser_exit.set_defaults(exec=doExit)
+
+    # Execute interactive commands
+    while True:
+        try:
+            commandArgs = parser.parse_args(input('# ').split(' '))
+            commandArgs.psu = args.psu
+            if 'exec' in commandArgs:
+                commandArgs.exec(commandArgs)
+        except Exception as e:
+            print(f'[-] {e}')
+
+def addPsuCommandsToSubParsers(subparsers, includePsu = True):
+    """Add the PSU commands parsers to the subparsers.
+
+    Args:
+        subparsers (_SubParsersAction): The subparser to have PSU parsers added to.
+        includePsu (bool, optional): If to include the PSU positional argument to parsers. Defaults to True.
+    """
+    # psu list
+    parser_list = subparsers.add_parser('list', aliases=['l', 'ls'], help='List the files and directories within the game save.')
+    if includePsu:
+        parser_list.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_list.set_defaults(exec=doList)
+
+    # psu create
+    parser_create = subparsers.add_parser('create', aliases=['c'], help='Create a PSU game save file.')
+    if includePsu:
+        parser_create.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_create.set_defaults(exec=doCreate)
+
+    # psu import
+    parser_import = subparsers.add_parser('import', aliases=['im'], help='Import a file from the local disk to the game save.')
+    if includePsu:
+        parser_import.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_import.add_argument('filepath', type=str, help='The filepath to the file being imported.')
+    parser_import.add_argument('--name', required=False, type=str, help='The filename to be saved in the PSU game save file. (Default: filepath filename)')
+    parser_import.set_defaults(exec=doImport)
+
+    # psu export
+    parser_export = subparsers.add_parser('export', aliases=['e'], help='Export a file from the game save to the local disk.')
+    if includePsu:
+        parser_export.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_export.add_argument('name', type=str, help='The PSU entry filename to be exported.')
+    parser_export.add_argument('--filepath', required=False, type=str, help='The exported filepath location where the file will be saved to. (Default: ./{name})')
+    parser_export.set_defaults(exec=doExport)
+
+    # psu rename
+    parser_rename = subparsers.add_parser('rename', aliases=['r'], help='Rename a file within the game save.')
+    if includePsu:
+        parser_rename.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_rename.add_argument('name', type=str, help='The existing PSU entry filename to be renamed.')
+    parser_rename.add_argument('to', type=str, help='The new PSU entry filename.')
+    parser_rename.set_defaults(exec=doRename)
+
+    # psu delete
+    parser_delete = subparsers.add_parser('delete', aliases=['d', 'del', 'rm'], help='Delete a file from within the game save.')
+    if includePsu:
+        parser_delete.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_delete.add_argument('name', type=str, help='The PSU entry filename to be deleted.')
+    parser_delete.set_defaults(exec=doDelete)
+
+def main(args):
+    """Pass arguments to the default function handler based on the given command.
+
+    Args:
+        args (Object): The parsed command line arguments.
+    """
+    if 'exec' in args:
+        args.exec(args)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Manipulate PS2 PSU game save files.')
+    parser.add_argument('-v', '--version', action='version', version="%(prog)s " + VERSION)
+    subparsers = parser.add_subparsers(title='Commands')
+
+    # psu interactive
+    parser_interactive = subparsers.add_parser('interactive', aliases=['i'], help='Interactive command prompt.')
+    parser_interactive.add_argument('psu', type=str, help='The filepath to the PSU game save file.')
+    parser_interactive.set_defaults(exec=doInteractive)
+
+    # PSU Commands
+    addPsuCommandsToSubParsers(subparsers)
+
+    main(parser.parse_args())
