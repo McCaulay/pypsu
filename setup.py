@@ -5,7 +5,7 @@ import os
 from setuptools import setup
 
 PACKAGE_NAME = 'pypsu'
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 
 def read(filename):
     return open(os.path.join(os.path.dirname(__file__), filename), 'r').read()

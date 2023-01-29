@@ -145,10 +145,10 @@ class PSU:
             if entry.header.type == Type.DIRECTORY:
                 if entry.name == '.' or entry.name == '..':
                     # "." and ".." directories have 0 size
-                    entry.size = 0
+                    entry.header.size = 0
                 else:
                     # Other directories size are the number of entries
-                    entry.size = len(self.entries)
+                    entry.header.size = len(self.entries) - 1
 
             # Serialize the entry
             data += entry.serialize()
