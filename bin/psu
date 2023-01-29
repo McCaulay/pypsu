@@ -5,7 +5,7 @@ import sys
 from psu.psu import PSU
 from psu.exceptions import PSUException
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 class ArgumentParser(argparse.ArgumentParser):
     def error(self, message):

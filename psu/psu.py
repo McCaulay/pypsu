@@ -148,7 +148,7 @@ class PSU:
                     entry.size = 0
                 else:
                     # Other directories size are the number of entries
-                    entry.size = len(self.entries) - 1
+                    entry.size = len(self.entries)
 
             # Serialize the entry
             data += entry.serialize()
