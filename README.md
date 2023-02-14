@@ -1,5 +1,11 @@
 # pypsu
 
+## Overview
+
+This Python package contains a command line application which allows you to modify PSU files from a PlayStation 2 game save file. Additionally, it contains a library for interacting with the PSU file from Python. With this tool you can list, import, export, rename and delete files within a PSU file.
+
+For additional information on the inner working of this application, see the assosicated blog post "[mast1c0re: Part 1 - Modifying PS2 game save files](https://mccaulay.co.uk/mast1c0re-part-1-modifying-ps2-game-save-files/)".
+
 ## Installation
 
 Use the following command to install the pypsu package with pip:
